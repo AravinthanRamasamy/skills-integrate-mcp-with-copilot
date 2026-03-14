@@ -3,6 +3,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const userIcon = document.getElementById("user-icon");
+  const loginModal = document.getElementById("login-modal");
+  const loginForm = document.getElementById("login-form");
+  const cancelLogin = document.getElementById("cancel-login");
+  const loginMessage = document.getElementById("login-message");
+
+  let isLoggedIn = localStorage.getItem("admin_token") === "admin_token";
+
+  function updateUserIcon() {
+    userIcon.textContent = isLoggedIn ? "👑" : "👤";
+  }
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -21,21 +32,36 @@ document.addEventListener("DOMContentLoaded", () => {
         const spotsLeft =
           details.max_participants - details.participants.length;
 
-        // Create participants HTML with delete icons instead of bullet points
-        const participantsHTML =
-          details.participants.length > 0
-            ? `<div class="participants-section">
-              <h5>Participants:</h5>
-              <ul class="participants-list">
-                ${details.participants
-                  .map(
-                    (email) =>
-                      `<li><span class="participant-email">${email}</span><button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button></li>`
-                  )
-                  .join("")}
-              </ul>
-            </div>`
-            : `<p><em>No participants yet</em></p>`;
+        // Create participants HTML
+        let participantsHTML;
+        if (isLoggedIn) {
+          participantsHTML =
+            details.participants.length > 0
+              ? `<div class="participants-section">
+                <h5>Participants:</h5>
+                <ul class="participants-list">
+                  ${details.participants
+                    .map(
+                      (email) =>
+                        `<li><span class="participant-email">${email}</span><button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button></li>`
+                    )
+                    .join("")}
+                </ul>
+              </div>`
+              : `<p><em>No participants yet</em></p>`;
+        } else {
+          participantsHTML =
+            details.participants.length > 0
+              ? `<div class="participants-section">
+                <h5>Participants:</h5>
+                <ul class="participants-list">
+                  ${details.participants
+                    .map((email) => `<li>${email}</li>`)
+                    .join("")}
+                </ul>
+              </div>`
+              : `<p><em>No participants yet</em></p>`;
+        }
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
@@ -56,10 +82,12 @@ document.addEventListener("DOMContentLoaded", () => {
         activitySelect.appendChild(option);
       });
 
-      // Add event listeners to delete buttons
-      document.querySelectorAll(".delete-btn").forEach((button) => {
-        button.addEventListener("click", handleUnregister);
-      });
+      // Add event listeners to delete buttons if logged in
+      if (isLoggedIn) {
+        document.querySelectorAll(".delete-btn").forEach((button) => {
+          button.addEventListener("click", handleUnregister);
+        });
+      }
     } catch (error) {
       activitiesList.innerHTML =
         "<p>Failed to load activities. Please try again later.</p>";
@@ -80,6 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
         )}/unregister?email=${encodeURIComponent(email)}`,
         {
           method: "DELETE",
+          headers: {
+            "token": localStorage.getItem("admin_token")
+          }
         }
       );
 
